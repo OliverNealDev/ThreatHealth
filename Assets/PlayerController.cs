@@ -46,6 +46,6 @@ public class PlayerController : MonoBehaviour
 
     void TurnToCursor()
     {
-        transform.right = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()) - transform.position;
+        transform.right = Vector3.ProjectOnPlane(Camera.main.ScreenToWorldPoint(new Vector3(Mouse.current.position.ReadValue().x, Mouse.current.position.ReadValue().y, Camera.main.WorldToScreenPoint(transform.position).z)) - transform.position, Vector3.forward).normalized;
     }
 }
