@@ -8,6 +8,12 @@ public class PlayerController : MonoBehaviour
 
     private Rigidbody2D rb;
     private Vector2 move;
+    
+    [SerializeField] private GameObject projectilePrefab;
+    [SerializeField] private float projectileSpeed;
+    [SerializeField] private float projectileRange;
+    [SerializeField] private float fireRate;
+    private float timeSinceShot;
 
     void Awake()
     {
@@ -17,11 +23,16 @@ public class PlayerController : MonoBehaviour
     void FixedUpdate()
     {
         CheckMovementInputs();
+        CheckAttackInputs();
     }
 
     void Update()
     {
         TurnToCursor();
+        if (timeSinceShot < fireRate)
+        {
+            timeSinceShot += Time.deltaTime;
+        }
     }
 
     void CheckMovementInputs()
@@ -41,6 +52,18 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKey(KeyCode.D))
         {
             rb.linearVelocity += new Vector2(speed, 0f);
+        }
+    }
+
+    void CheckAttackInputs()
+    {
+        if (Input.GetMouseButton(0) && timeSinceShot >= fireRate)
+        {
+            GameObject projectile = Instantiate(projectilePrefab, transform.position + transform.right * 0.5f, Quaternion.identity);
+            projectile.GetComponent<Rigidbody2D>().linearVelocity = transform.right * projectileSpeed;
+            
+            Destroy(projectile, projectileRange / projectileSpeed);
+            timeSinceShot = 0f;
         }
     }
 
