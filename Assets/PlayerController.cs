@@ -2,20 +2,28 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Tilemaps;
 
-[RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] private float speed = 6f;
 
     private Rigidbody2D rb;
-    private Vector2 move;
     
+    [Header("Combat Settings")]
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private float projectileSpeed;
     [SerializeField] private float projectileRange;
-    [SerializeField] private float fireRate;
+
+    [Header("Dynamic Fire Rate")]
+    [Tooltip("Time between shots when you have 0% turf (Slow)")]
+    [SerializeField] private float slowFireRate = 0.5f; 
+    [Tooltip("Time between shots when you have 100% turf (Fast)")]
+    [SerializeField] private float fastFireRate = 0.1f;
+    
+    private float currentFireDelay; 
     private float timeSinceShot;
 
+    [Header("Turf Settings")]
+    [SerializeField] private TurfManager turfManager;
     [SerializeField] private Tilemap turfTilemap;
     [SerializeField] private Color turfColor = Color.green;
     private Vector3Int lastCell = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
@@ -23,21 +31,34 @@ public class PlayerController : MonoBehaviour
     void Awake()
     { 
         rb = GetComponent<Rigidbody2D>();
+        currentFireDelay = slowFireRate;
     }
 
     void FixedUpdate()
     {
         CheckMovementInputs();
-        CheckAttackInputs();
         PaintTurfUnderPlayer();
     }
 
     void Update()
     {
         TurnToCursor();
-        if (timeSinceShot < fireRate)
+        
+        CalculateFireRate();
+
+        if (timeSinceShot < currentFireDelay)
         {
             timeSinceShot += Time.deltaTime;
+        }
+
+        CheckAttackInputs();
+    }
+
+    void CalculateFireRate()
+    {
+        if (turfManager != null)
+        {
+            currentFireDelay = Mathf.Lerp(slowFireRate, fastFireRate, turfManager.GetTurfPercentage());
         }
     }
 
@@ -56,7 +77,7 @@ public class PlayerController : MonoBehaviour
 
     void CheckAttackInputs()
     {
-        if (Mouse.current.leftButton.isPressed && timeSinceShot >= fireRate)
+        if (Mouse.current.leftButton.isPressed && timeSinceShot >= currentFireDelay)
         {
             GameObject projectile = Instantiate(
                 projectilePrefab,
@@ -64,7 +85,10 @@ public class PlayerController : MonoBehaviour
                 Quaternion.identity
             );
 
-            projectile.GetComponent<Rigidbody2D>().linearVelocity = transform.right * projectileSpeed;
+            if (projectile.TryGetComponent<Rigidbody2D>(out Rigidbody2D projRb))
+            {
+                projRb.linearVelocity = transform.right * projectileSpeed;
+            }
             
             Destroy(projectile, projectileRange / projectileSpeed);
             timeSinceShot = 0f;
@@ -89,9 +113,16 @@ public class PlayerController : MonoBehaviour
         if (turfTilemap == null) return;
 
         Vector3Int cellPos = turfTilemap.WorldToCell(transform.position);
+        
         if (cellPos == lastCell) return;
 
-        if (turfTilemap.GetTile(cellPos) == null)
+        if (!turfTilemap.HasTile(cellPos))
+        {
+            lastCell = cellPos;
+            return;
+        }
+
+        if (turfTilemap.GetColor(cellPos) == turfColor)
         {
             lastCell = cellPos;
             return;
@@ -104,6 +135,12 @@ public class PlayerController : MonoBehaviour
         }
 
         turfTilemap.SetColor(cellPos, turfColor);
+
+        if (turfManager != null)
+        {
+            turfManager.RegisterTile();
+        }
+
         lastCell = cellPos;
     }
 }
