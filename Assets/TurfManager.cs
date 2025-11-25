@@ -6,11 +6,11 @@ public class TurfManager : MonoBehaviour
     public Tilemap turfTilemap;
     public int totalTiles = 0;
     public int ownedTiles = 0;
+    public int enemyTiles = 0;
 
     void Start()
     {
-        // Count all tiles in the map to establish the "100%" baseline
-        turfTilemap.CompressBounds(); // Ensures bounds are tight to the drawn tiles
+        turfTilemap.CompressBounds();
         foreach (var pos in turfTilemap.cellBounds.allPositionsWithin)
         {
             if (turfTilemap.HasTile(pos))
@@ -20,9 +20,16 @@ public class TurfManager : MonoBehaviour
         }
     }
 
-    public void RegisterTile()
+    public void RegisterTile(bool isPlayer)
     {
-        ownedTiles++;
+        if (isPlayer)
+        {
+            ownedTiles++;
+        }
+        else
+        {
+            enemyTiles++;
+        }
     }
 
     public float GetTurfPercentage()

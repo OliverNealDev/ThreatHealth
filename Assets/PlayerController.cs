@@ -82,15 +82,22 @@ public class PlayerController : MonoBehaviour
             GameObject projectile = Instantiate(
                 projectilePrefab,
                 transform.position + transform.right * 0.5f,
-                Quaternion.identity
+                transform.rotation
             );
 
-            if (projectile.TryGetComponent<Rigidbody2D>(out Rigidbody2D projRb))
+            /*if (projectilePrefab.TryGetComponent<Rigidbody2D>(out Rigidbody2D projRb))
             {
                 projRb.linearVelocity = transform.right * projectileSpeed;
-            }
+            }*/
             
-            Destroy(projectile, projectileRange / projectileSpeed);
+            projectile.GetComponent<bulletController>().Initialise(
+                true,
+                projectileSpeed,
+                5f,
+                1f,
+                0f
+            );
+             
             timeSinceShot = 0f;
         }
     }
@@ -138,7 +145,7 @@ public class PlayerController : MonoBehaviour
 
         if (turfManager != null)
         {
-            turfManager.RegisterTile();
+            turfManager.RegisterTile(true);
         }
 
         lastCell = cellPos;
