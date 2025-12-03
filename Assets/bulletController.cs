@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class bulletController : MonoBehaviour
@@ -9,11 +10,9 @@ public class bulletController : MonoBehaviour
     [SerializeField] private float size = 1f;
     [SerializeField] private float stunDuration = 0f;
     
-        
-    
     void Start()
     {
-        Destroy(gameObject, 1);
+        StartCoroutine(DespawnSequence());
     }
 
     public void Initialise(
@@ -37,12 +36,38 @@ public class bulletController : MonoBehaviour
         if (isPlayerBullet)
         {
             gameObject.tag = "PlayerBullet";
-            GetComponent<SpriteRenderer>().color = Color.cyan;
+            transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color32(64, 186, 255, 255);
         }
         else
         {
             gameObject.tag = "EnemyBullet";
-            GetComponent<SpriteRenderer>().color = Color.red;
+            transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color32(255, 66, 66, 255);
         }
+    }
+
+    IEnumerator DespawnSequence()
+    {
+        yield return new WaitForSeconds(2f);
+
+        float duration = 0.25f;
+        float elapsed = 0f;
+        
+        Vector3 startScale = transform.localScale;
+        SpriteRenderer sr = transform.GetChild(0).GetComponent<SpriteRenderer>();
+        Color startColor = sr.color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+
+            transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
+            
+            sr.color = new Color(startColor.r, startColor.g, startColor.b, Mathf.Lerp(startColor.a, 0f, t));
+
+            yield return null;
+        }
+
+        Destroy(gameObject);
     }
 }

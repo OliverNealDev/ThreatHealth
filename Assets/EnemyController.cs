@@ -1,5 +1,7 @@
+using System;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 
 public class EnemyController : MonoBehaviour
@@ -10,7 +12,9 @@ public class EnemyController : MonoBehaviour
     [Header("Turf Settings")]
     [SerializeField] private TurfManager turfManager;
     [SerializeField] private Tilemap turfTilemap;
-    [SerializeField] private Color turfColor = Color.green;
+    [SerializeField] private Color enemyColor;
+    [SerializeField] private Color disabledColor;
+    private bool isDisabled = false;
     private Vector3Int lastCell = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
     
     void Awake()
@@ -22,7 +26,12 @@ public class EnemyController : MonoBehaviour
 
         var pos = transform.position;
         transform.position = new Vector3(pos.x, pos.y, 0f);
-    }
+        
+        playerObj = GameObject.Find("Player");
+        turfManager = GameObject.Find("TurfManager").GetComponent<TurfManager>();
+        turfTilemap = GameObject.Find("TurfTilemap").GetComponent<Tilemap>();
+        
+        transform.localScale = new Vector3(0.01f, 0.01f, 0.01f); }
 
     void Start()
     {
@@ -40,9 +49,31 @@ public class EnemyController : MonoBehaviour
     void Update()
     {
         if (agent == null || playerObj == null) return;
-
-        agent.SetDestination(playerObj.transform.position);
-        // we need to set destination to the nearest available tile
+        
+        if (transform.localScale == Vector3.one)
+        {
+            if (isDisabled)
+            {
+                isDisabled = false;
+                GetComponent<SpriteRenderer>().color = enemyColor;
+            }
+            
+            agent.SetDestination(playerObj.transform.position);
+        }
+        else
+        {
+            if (!isDisabled)
+            {
+                isDisabled = true;
+                GetComponent<SpriteRenderer>().color = disabledColor;
+            }
+            
+            transform.localScale += Vector3.one * Time.deltaTime * 0.1f;
+            if (transform.localScale.x >= 1f)
+            {
+                transform.localScale = Vector3.one;
+            }
+        }
     }
 
     void PaintTurfUnderEnemy()
@@ -59,7 +90,7 @@ public class EnemyController : MonoBehaviour
             return;
         }
 
-        if (turfTilemap.GetColor(cellPos) == turfColor)
+        if (turfTilemap.GetColor(cellPos) == enemyColor)
         {
             lastCell = cellPos;
             return;
@@ -71,7 +102,7 @@ public class EnemyController : MonoBehaviour
             turfTilemap.SetTileFlags(cellPos, TileFlags.None);
         }
 
-        turfTilemap.SetColor(cellPos, turfColor);
+        turfTilemap.SetColor(cellPos, enemyColor);
 
         if (turfManager != null)
         {
@@ -79,5 +110,20 @@ public class EnemyController : MonoBehaviour
         }
 
         lastCell = cellPos;
+    }
+
+    private void OnCollisionEnter2D(Collision2D other)
+    {
+        if (other.gameObject.CompareTag("PlayerBullet"))
+        {
+            Destroy(other.gameObject);
+            
+            transform.localScale -= Vector3.one * 0.2f;
+
+            if (transform.localScale.x <= 0.25f)
+            {
+                Destroy(gameObject);
+            }
+        }
     }
 }

@@ -4,6 +4,12 @@ using UnityEngine.Tilemaps;
 public class TurfManager : MonoBehaviour
 {
     public Tilemap turfTilemap;
+    
+    [Header("Settings")]
+    public bool startOwnedByEnemies;
+    public Color enemyColor = Color.red;
+
+    [Header("Stats")]
     public int totalTiles = 0;
     public int ownedTiles = 0;
     public int enemyTiles = 0;
@@ -16,6 +22,18 @@ public class TurfManager : MonoBehaviour
             if (turfTilemap.HasTile(pos))
             {
                 totalTiles++;
+
+                if (startOwnedByEnemies)
+                {
+                    // Unlock the tile so we can change its color
+                    turfTilemap.SetTileFlags(pos, TileFlags.None);
+                    
+                    // Set visual color
+                    turfTilemap.SetColor(pos, enemyColor);
+                    
+                    // Update count
+                    enemyTiles++;
+                }
             }
         }
     }
@@ -25,10 +43,14 @@ public class TurfManager : MonoBehaviour
         if (isPlayer)
         {
             ownedTiles++;
+            // Optional: If you want a "Zero Sum" game where taking a tile 
+            // removes it from the enemy count, uncomment the line below:
+            // if (enemyTiles > 0) enemyTiles--; 
         }
         else
         {
             enemyTiles++;
+            // if (ownedTiles > 0) ownedTiles--;
         }
     }
 
