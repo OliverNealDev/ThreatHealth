@@ -8,6 +8,7 @@ public class EnemyManager : MonoBehaviour
     [SerializeField] private int initialEnemyCount = 0;
     [SerializeField] private float spawnInterval = 5f;
     private float timeSinceLastSpawn = 0f;
+    [SerializeField] private int maxEnemyCount = 20;
     
     [SerializeField] private GameObject enemyPrefab;
 
@@ -39,7 +40,7 @@ public class EnemyManager : MonoBehaviour
 
         List<Vector3> validSpawnPoints = GetValidSpawnPoints(spawnAnywhere);
 
-        if (validSpawnPoints.Count > 0)
+        if (validSpawnPoints.Count > 0 && GameObject.FindGameObjectsWithTag("Enemy").Length < maxEnemyCount)
         {
             int randomIndex = Random.Range(0, validSpawnPoints.Count);
             Vector3 spawnPosition = validSpawnPoints[randomIndex];

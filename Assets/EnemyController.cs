@@ -17,6 +17,9 @@ public class EnemyController : MonoBehaviour
     private bool isDisabled = false;
     private Vector3Int lastCell = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
     
+    private Vector2 randomNearbyPoint;
+    private bool isChasing;
+    
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -41,6 +44,9 @@ public class EnemyController : MonoBehaviour
         {
             Debug.LogError("Enemy is NOT on NavMesh at Start. Check Z position and NavMesh baking.");
         }
+        
+        Vector2 randomDirection = UnityEngine.Random.insideUnitCircle.normalized * UnityEngine.Random.Range(2f, 5f);
+        randomNearbyPoint = (Vector2)transform.position + randomDirection;
     }
 
     void FixedUpdate()
@@ -52,17 +58,8 @@ public class EnemyController : MonoBehaviour
     {
         if (agent == null || playerObj == null) return;
         
-        if (transform.localScale == Vector3.one)
-        {
-            if (isDisabled)
-            {
-                isDisabled = false;
-                GetComponent<SpriteRenderer>().color = enemyColor;
-            }
-            
-            agent.SetDestination(playerObj.transform.position);
-        }
-        else
+        // --- Growing Phase ---
+        if (transform.localScale.x < 1f)
         {
             if (!isDisabled)
             {
@@ -70,11 +67,52 @@ public class EnemyController : MonoBehaviour
                 GetComponent<SpriteRenderer>().color = disabledColor;
             }
             
+            // Stop moving while growing
+            if (agent.hasPath) agent.ResetPath(); 
+
             transform.localScale += Vector3.one * Time.deltaTime * 0.1f;
-            if (transform.localScale.x >= 1f)
+            if (transform.localScale.x >= 1f) transform.localScale = Vector3.one;
+            
+            return; // Exit Update so we don't run movement logic while growing
+        }
+
+        // --- Active Phase ---
+        if (isDisabled)
+        {
+            isDisabled = false;
+            GetComponent<SpriteRenderer>().color = enemyColor;
+        }
+            
+        float distanceToPlayer = Vector2.Distance(transform.position, playerObj.transform.position);
+
+        // 1. Chase Player
+        if (distanceToPlayer <= 5f)
+        {
+            agent.SetDestination(playerObj.transform.position);
+        }
+        // 2. Roam Randomly
+        else
+        {
+            // Check if we reached the destination OR if we have no path
+            if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
             {
-                transform.localScale = Vector3.one;
+                SetNewRandomDestination();
             }
+        }
+    }
+
+    // Helper method to find a VALID point on the NavMesh
+    void SetNewRandomDestination()
+    {
+        Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized * UnityEngine.Random.Range(2f, 5f);
+        Vector3 targetPos = transform.position + new Vector3(randomDir.x, randomDir.y, 0);
+
+        NavMeshHit hit;
+        // SamplePosition checks if the point is actually walkable. 
+        // If the random point is in a wall, this finds the closest floor point.
+        if (NavMesh.SamplePosition(targetPos, out hit, 2.0f, NavMesh.AllAreas))
+        {
+            agent.SetDestination(hit.position);
         }
     }
 
