@@ -27,11 +27,13 @@ public class EnemyController : MonoBehaviour
         var pos = transform.position;
         transform.position = new Vector3(pos.x, pos.y, 0f);
         
-        playerObj = GameObject.Find("Player");
-        turfManager = GameObject.Find("TurfManager").GetComponent<TurfManager>();
-        turfTilemap = GameObject.Find("TurfTilemap").GetComponent<Tilemap>();
+        // It is often safer to assign these in Inspector, but Find is okay for simple scenes
+        if (playerObj == null) playerObj = GameObject.Find("Player");
+        if (turfManager == null) turfManager = FindAnyObjectByType<TurfManager>();
+        if (turfTilemap == null) turfTilemap = GameObject.Find("TurfTilemap")?.GetComponent<Tilemap>();
         
-        transform.localScale = new Vector3(0.01f, 0.01f, 0.01f); }
+        transform.localScale = new Vector3(0.01f, 0.01f, 0.01f); 
+    }
 
     void Start()
     {
@@ -78,36 +80,15 @@ public class EnemyController : MonoBehaviour
 
     void PaintTurfUnderEnemy()
     {
-        if (turfTilemap == null) return;
+        if (turfTilemap == null || turfManager == null) return;
 
         Vector3Int cellPos = turfTilemap.WorldToCell(transform.position);
         
         if (cellPos == lastCell) return;
 
-        if (!turfTilemap.HasTile(cellPos))
-        {
-            lastCell = cellPos;
-            return;
-        }
-
-        if (turfTilemap.GetColor(cellPos) == enemyColor)
-        {
-            lastCell = cellPos;
-            return;
-        }
-
-        var flags = turfTilemap.GetTileFlags(cellPos);
-        if ((flags & TileFlags.LockColor) != 0)
-        {
-            turfTilemap.SetTileFlags(cellPos, TileFlags.None);
-        }
-
-        turfTilemap.SetColor(cellPos, enemyColor);
-
-        if (turfManager != null)
-        {
-            turfManager.RegisterTile(false);
-        }
+        // Delegate all logic to the Manager (Painting + Scoring)
+        // Pass 'false' because this is an Enemy
+        turfManager.RegisterTile(cellPos, false);
 
         lastCell = cellPos;
     }

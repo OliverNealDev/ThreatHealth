@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Tilemaps;
@@ -7,6 +8,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float speed = 6f;
 
     private Rigidbody2D rb;
+
+    [SerializeField] private TextMeshProUGUI MultiplierText;
     
     [Header("Combat Settings")]
     [SerializeField] private GameObject projectilePrefab;
@@ -25,7 +28,7 @@ public class PlayerController : MonoBehaviour
     [Header("Turf Settings")]
     [SerializeField] private TurfManager turfManager;
     [SerializeField] private Tilemap turfTilemap;
-    [SerializeField] private Color turfColor = Color.green;
+    // We don't need turfColor here anymore, the Manager handles the colors!
     private Vector3Int lastCell = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
 
     void Awake()
@@ -60,6 +63,11 @@ public class PlayerController : MonoBehaviour
         {
             currentFireDelay = Mathf.Lerp(slowFireRate, fastFireRate, turfManager.GetTurfPercentage());
         }
+
+        float bps = 1f / currentFireDelay;
+        bps = Mathf.Round(bps * 10.0f) / 10.0f; // Round to 1 decimal place
+
+        MultiplierText.text = bps + " p/s";
     }
 
     void CheckMovementInputs()
@@ -84,11 +92,6 @@ public class PlayerController : MonoBehaviour
                 transform.position + transform.right * 0.5f,
                 transform.rotation
             );
-
-            /*if (projectilePrefab.TryGetComponent<Rigidbody2D>(out Rigidbody2D projRb))
-            {
-                projRb.linearVelocity = transform.right * projectileSpeed;
-            }*/
             
             projectile.GetComponent<bulletController>().Initialise(
                 true,
@@ -117,36 +120,15 @@ public class PlayerController : MonoBehaviour
 
     void PaintTurfUnderPlayer()
     {
-        if (turfTilemap == null) return;
+        if (turfTilemap == null || turfManager == null) return;
 
         Vector3Int cellPos = turfTilemap.WorldToCell(transform.position);
         
         if (cellPos == lastCell) return;
 
-        if (!turfTilemap.HasTile(cellPos))
-        {
-            lastCell = cellPos;
-            return;
-        }
-
-        if (turfTilemap.GetColor(cellPos) == turfColor)
-        {
-            lastCell = cellPos;
-            return;
-        }
-
-        var flags = turfTilemap.GetTileFlags(cellPos);
-        if ((flags & TileFlags.LockColor) != 0)
-        {
-            turfTilemap.SetTileFlags(cellPos, TileFlags.None);
-        }
-
-        turfTilemap.SetColor(cellPos, turfColor);
-
-        if (turfManager != null)
-        {
-            turfManager.RegisterTile(true);
-        }
+        // Delegate all logic to the Manager (Painting + Scoring)
+        // Pass 'true' because this is the Player
+        turfManager.RegisterTile(cellPos, true);
 
         lastCell = cellPos;
     }
